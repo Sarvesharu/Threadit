@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}u/{{ profile_user.username }} — Threadit{% endblock %}
+
+{% block content %}
+<div class="container profile-page-container">
+
+    <!-- Profile Header Card -->
+    <div class="card profile-header-card">
+        <div class="profile-header-main">
+            <div class="profile-avatar-large">
+                {{ profile_user.display_name[0] }}
+            </div>
+            <div class="profile-user-info">
+                <h1>{{ profile_user.display_name }}</h1>
+                <span class="profile-username">u/{{ profile_user.username }}</span>
+                {% if profile_user.bio %}
+                    <p class="profile-bio">{{ profile_user.bio }}</p>
+                {% endif %}
+                <span class="profile-joined">Member since {{ profile_user.created_at }}</span>
+            </div>
+        </div>
+
+        <div class="profile-stats-panel">
+            <div class="profile-stat-box">
+                <span class="stat-number">{{ profile_user.karma }}</span>
+                <span class="stat-title">Karma Score</span>
+                <span class="stat-sub">Updated via Custom HashMap</span>
+            </div>
+            <div class="profile-stat-box">
+                <span class="stat-number">{{ posts|length }}</span>
+                <span class="stat-title">Submissions</span>
+                <span class="stat-sub">Active discussions</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="layout-two-col">
+
+        <!-- Left: User's Posts Feed -->
+        <div class="profile-posts-column">
+            <div class="section-title-row">
+                <h3>Posts by u/{{ profile_user.username }}</h3>
+                <span class="post-count">{{ posts|length }} posts</span>
+            </div>
+
+            {% if posts %}
+                <div class="posts-list">
+                    {% for post in posts %}
+                        <article class="post-card" id="post-{{ post.id }}">
+                            <div class="vote-column">
+                                <button class="vote-btn upvote {% if post.user_vote == 1 %}active{% endif %}"
+                                        onclick="handleVote({{ post.id }}, 1)"
+                                        {% if not current_user %}disabled{% endif %}>
+                                    ▲
+                                </button>
+                                <span class="post-score" id="score-{{ post.id }}">{{ post.score }}</span>
+                                <button class="vote-btn downvote {% if post.user_vote == -1 %}active{% endif %}"
+                                        onclick="handleVote({{ post.id }}, -1)"
+                                        {% if not current_user %}disabled{% endif %}>
+                                    ▼
+                                </button>
+                            </div>
+                            <div class="post-body">
+                                <div class="post-meta">
+                                    <a href="{{ url_for('view_community', slug=post.community_slug) }}" class="community-badge">
+                                        c/{{ post.community_name }}
+                                    </a>
+                                    <span class="meta-dot">•</span>
+                                    <span class="post-time">{{ post.created_at }}</span>
+                                </div>
+                                <h2 class="post-title">
+                                    <a href="{{ url_for('view_post', post_id=post.id) }}">{{ post.title }}</a>
+                                </h2>
+                                <p class="post-snippet">{{ post.content[:200] }}...</p>
+                                <div class="post-footer">
+                                    <a href="{{ url_for('view_post', post_id=post.id) }}" class="footer-action">
+                                         View Discussion
+                                    </a>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card empty-state">
+                    <p>No posts published by this user yet.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Right: Simulated Distributed HashMap Sharding Diagnostics -->
+        <aside class="sidebar-column">
+            <div class="card sharding-card">
+                <div class="sharding-header">
+                    <h4> Simulated Distributed Sharding</h4>
+                    <span class="dsa-tag">Logical Partitioning</span>
+                </div>
+                <p class="sharding-desc">
+                    In our simulated Distributed HashMap, keys are deterministically routed to isolated in-memory shards via <code>abs(hash(key)) % N</code>.
+                </p>
+
+                <!-- Current User's Shard Assignment -->
+                <div class="user-shard-assignment">
+                    <span class="assignment-label">Current Account Partition:</span>
+                    <div class="assignment-val">
+                        <code>user:{{ profile_user.id }}</code> &rarr; <strong>Shard #{{ user_shard_id }}</strong>
+                    </div>
+                </div>
+
+                <!-- Shard Partition Distribution Table -->
+                <div class="shards-stats-list">
+                    <span class="stats-heading">Cluster Partition Balance ({{ sharding_stats.total_shards }} Shards):</span>
+                    {% for shard in sharding_stats.shards %}
+                        <div class="shard-stat-row {% if shard.shard_id == user_shard_id %}active-shard{% endif %}">
+                            <div class="shard-label-row">
+                                <span class="shard-title">Shard #{{ shard.shard_id }}</span>
+                                <span class="shard-count">{{ shard.item_count }} items ({{ shard.percentage }}%)</span>
+                            </div>
+                            <div class="shard-bar-bg">
+                                <div class="shard-bar-fill" style="width: {{ shard.percentage }}%;"></div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="distributed-note">
+                    <strong>Exhibition Architectural Note:</strong><br>
+                    This demonstrates logical in-memory hash partitioning. In production systems (e.g. Cassandra, DynamoDB), each shard represents an autonomous physical host with network RPCs, replication, and Paxos/Raft consensus.
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+</div>
+{% endblock %}

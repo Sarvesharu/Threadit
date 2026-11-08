@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if is_benchmark %}
+        Performance Benchmarks — Threadit
+    {% else %}
+        Top-K Trending Posts — Threadit
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container trending-page-container">
+
+    {% if is_benchmark %}
+        <!-- LIVE PERFORMANCE BENCHMARK SUITE -->
+        <div class="card page-header-card">
+            <div class="header-left">
+                <h2> Live DSA Performance Demonstration</h2>
+                <p class="subtitle">Empirical benchmarking of custom Data Structures against baseline algorithms using <code>time.perf_counter()</code>.</p>
+            </div>
+            <div class="header-right">
+                <a href="{{ url_for('performance_page') }}" class="btn btn-primary btn-sm"> Re-run Benchmarks</a>
+            </div>
+        </div>
+
+        <div class="benchmarks-container">
+            {% for b in benchmarks %}
+                <div class="card benchmark-card">
+                    <div class="benchmark-header">
+                        <h3>{{ b.name }}</h3>
+                        <span class="speedup-badge"> {{ b.speedup }}x Faster</span>
+                    </div>
+
+                    <div class="benchmark-grid">
+                        <!-- Custom DSA Result -->
+                        <div class="bench-box dsa-box">
+                            <span class="bench-box-title">Custom Data Structure Implementation</span>
+                            <div class="bench-detail"><strong>Operation:</strong> {{ b.dsa_operation }}</div>
+                            <div class="bench-detail"><strong>Complexity:</strong> <code>{{ b.dsa_complexity }}</code></div>
+                            <div class="bench-time highlight">
+                                <span class="time-label">Execution Time:</span>
+                                <span class="time-num">{{ b.dsa_time_ms }} ms</span>
+                            </div>
+                        </div>
+
+                        <!-- Baseline Result -->
+                        <div class="bench-box baseline-box">
+                            <span class="bench-box-title">Baseline Comparison Operation</span>
+                            <div class="bench-detail"><strong>Operation:</strong> {{ b.baseline_operation }}</div>
+                            <div class="bench-detail"><strong>Complexity:</strong> <code>{{ b.baseline_complexity }}</code></div>
+                            <div class="bench-time">
+                                <span class="time-label">Execution Time:</span>
+                                <span class="time-num">{{ b.baseline_time_ms }} ms</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bench-meta">
+                        <span>Dataset Size: <strong>{{ b.dataset_size }} items</strong></span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Academic / Exhibition Theoretical Analysis Card -->
+        <div class="card analysis-card">
+            <h4> Theoretical vs Empirical Performance Notes</h4>
+            <p>
+                As demonstrated above, algorithmic complexity determines how operations scale with dataset size:
+            </p>
+            <ul>
+                <li><strong>Inverted Index:</strong> Eliminates linear text comparisons across all documents by directly looking up postings in an average <code>O(1)</code> custom HashMap bucket chain.</li>
+                <li><strong>Min-Heap Top-K:</strong> Rather than sorting all <code>N</code> elements in <code>O(N log N)</code>, maintaining a small min-heap of size <code>K</code> bounds the priority queue operations to <code>O(N log K)</code>, yielding substantial speedups especially when <code>K ≪ N</code>.</li>
+                <li><strong>Note on small datasets:</strong> On tiny in-memory datasets, Python interpreter bytecode overhead and CPU cache locality can introduce small variations. As dataset sizes scale, theoretical asymptotic boundaries dominate.</li>
+            </ul>
+        </div>
+
+    {% else %}
+        <!-- STANDARD TRENDING PAGE POWERED BY MIN-HEAP -->
+        <div class="card page-header-card">
+            <div class="header-left">
+                <h2> Trending Discussions</h2>
+                <p class="subtitle">Ranked by our custom Min-Heap Top-K algorithm. Zero reliance on Python's heapq.</p>
+            </div>
+            <div class="header-right k-selector-group">
+                <span class="k-label">Select Top-K:</span>
+                <a href="{{ url_for('trending', k=5) }}" class="btn {% if k == 5 %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">Top 5</a>
+                <a href="{{ url_for('trending', k=10) }}" class="btn {% if k == 10 %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">Top 10</a>
+                <a href="{{ url_for('trending', k=20) }}" class="btn {% if k == 20 %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">Top 20</a>
+            </div>
+        </div>
+
+        <!-- DSA Diagnostics Panel -->
+        <div class="card dsa-metrics-card">
+            <div class="metric-header">
+                <span class="metric-title"> Custom Min-Heap Algorithm Diagnostics</span>
+                <span class="dsa-tag">Time Complexity: O(N log K)</span>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-label">Execution Time</span>
+                    <span class="metric-val highlight">{{ execution_time_ms }} ms</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Heap Capacity (K)</span>
+                    <span class="metric-val">{{ k }} items</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Candidates Evaluated</span>
+                    <span class="metric-val">{{ total_candidates }} posts</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Decay Formula</span>
+                    <span class="metric-val"><code>(Score+5) / (Age+2)^1.2</code></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trending Posts List -->
+        <div class="trending-posts-list">
+            {% for post in posts %}
+                <article class="card trending-post-card">
+                    <div class="trending-rank-col">
+                        <span class="rank-badge rank-{{ post.rank }}">#{{ post.rank }}</span>
+                        <div class="trending-score-pill" title="Calculated Trending Score">
+                            <span class="t-val">{{ post.trending_score }}</span>
+                            <span class="t-lbl">trend</span>
+                        </div>
+                    </div>
+
+                    <div class="trending-content-col">
+                        <div class="post-meta">
+                            <a href="{{ url_for('view_community', slug=post.community_slug) }}" class="community-badge">
+                                c/{{ post.community_name }}
+                            </a>
+                            <span class="meta-dot">•</span>
+                            <span class="post-author">By <a href="{{ url_for('view_profile', username=post.author_username) }}">u/{{ post.author_username }}</a></span>
+                            <span class="meta-dot">•</span>
+                            <span class="post-time">{{ post.created_at }}</span>
+                        </div>
+
+                        <h3 class="post-title">
+                            <a href="{{ url_for('view_post', post_id=post.id) }}">{{ post.title }}</a>
+                        </h3>
+
+                        <p class="post-snippet">{{ post.content[:240] }}...</p>
+
+                        <div class="trending-stats-row">
+                            <span class="trend-stat">🏆 Score: <strong>{{ post.score }}</strong></span>
+                            <span class="trend-stat">👍 Upvotes: <strong>{{ post.upvotes }}</strong></span>
+                            <span class="trend-stat">👎 Downvotes: <strong>{{ post.downvotes }}</strong></span>
+                            <a href="{{ url_for('view_post', post_id=post.id) }}" class="btn btn-outline btn-sm">Join Discussion →</a>
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Home — Threadit{% endblock %}
+
+{% block content %}
+<div class="layout-two-col">
+
+    <!-- Left Column: Posts Feed -->
+    <div class="feed-column">
+
+        <!-- Create Post Card -->
+        <div class="card create-post-card">
+            <div class="create-post-header">
+                <span class="avatar-sm">{% if current_user %}{{ current_user.display_name[0] }}{% else %}?{% endif %}</span>
+                <span class="create-post-title">Create a Post</span>
+                <span class="dsa-indicator" title="Updates Inverted Index via Custom HashMap"> Live Index Update</span>
+            </div>
+
+            {% if current_user %}
+                <form action="{{ url_for('create_post') }}" method="POST" class="create-post-form">
+                    <div class="form-group">
+                        <select name="community_id" required class="select-input">
+                            <option value="" disabled selected>Select a Community (N-ary Tree Node)...</option>
+                            {% for c in global_communities %}
+                                <option value="{{ c.id }}">c/{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="title" placeholder="Title of your post..." required class="text-input">
+                    </div>
+                    <div class="form-group">
+                        <textarea name="content" placeholder="Share your technical thoughts, algorithms, code..." rows="3" required class="textarea-input"></textarea>
+                    </div>
+                    <div class="create-post-footer">
+                        <span class="form-hint">Posts are immediately tokenized into the custom Inverted Index.</span>
+                        <button type="submit" class="btn btn-primary">Post to Threadit</button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="create-post-prompt">
+                    <p>Log in or switch to an Arcane demo account above to create posts and vote!</p>
+                    <a href="{{ url_for('login') }}" class="btn btn-primary btn-sm">Log In Now</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Feed Filter Header -->
+        <div class="feed-header">
+            <h3>Recent Discussions</h3>
+            <span class="post-count">{{ posts|length }} posts loaded</span>
+        </div>
+
+        <!-- Posts Feed List -->
+        {% if posts %}
+            <div class="posts-list">
+                {% for post in posts %}
+                    <article class="post-card" id="post-{{ post.id }}">
+                        <!-- Voting Controls Column -->
+                        <div class="vote-column">
+                            <button class="vote-btn upvote {% if post.user_vote == 1 %}active{% endif %}"
+                                    onclick="handleVote({{ post.id }}, 1)"
+                                    title="Upvote (+1 score & author karma)"
+                                    {% if not current_user %}disabled{% endif %}>
+                                ▲
+                            </button>
+                            <span class="post-score" id="score-{{ post.id }}">{{ post.score }}</span>
+                            <button class="vote-btn downvote {% if post.user_vote == -1 %}active{% endif %}"
+                                    onclick="handleVote({{ post.id }}, -1)"
+                                    title="Downvote (-1 score & author karma)"
+                                    {% if not current_user %}disabled{% endif %}>
+                                ▼
+                            </button>
+                        </div>
+
+                        <!-- Post Main Body -->
+                        <div class="post-body">
+                            <div class="post-meta">
+                                <a href="{{ url_for('view_community', slug=post.community_slug) }}" class="community-badge">
+                                    c/{{ post.community_name }}
+                                </a>
+                                <span class="meta-dot">•</span>
+                                <span class="post-author">Posted by <a href="{{ url_for('view_profile', username=post.author_username) }}">u/{{ post.author_username }}</a></span>
+                                <span class="meta-dot">•</span>
+                                <span class="post-time">{{ post.created_at }}</span>
+                            </div>
+
+                            <h2 class="post-title">
+                                <a href="{{ url_for('view_post', post_id=post.id) }}">{{ post.title }}</a>
+                            </h2>
+
+                            <p class="post-snippet">{{ post.content[:220] }}{% if post.content|length > 220 %}...{% endif %}</p>
+
+                            <div class="post-footer">
+                                <a href="{{ url_for('view_post', post_id=post.id) }}" class="footer-action">
+                                     View Discussion
+                                </a>
+                                <span class="footer-info">
+                                    Upvotes: {{ post.upvotes }} | Downvotes: {{ post.downvotes }}
+                                </span>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state card">
+                <p>No posts available yet.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Sidebar -->
+    <aside class="sidebar-column">
+
+        <!-- Project DSA Overview Card -->
+        <div class="card sidebar-card dsa-showcase-card">
+            <h4> Core Data Structures</h4>
+            <p class="card-subtitle">Exhibition Architecture Highlights</p>
+            <ul class="dsa-list">
+                <li>
+                    <strong>Custom HashMap</strong>
+                    <span>Separate chaining with dynamic resizing (LF 0.75). Powers Inverted Index & search.</span>
+                </li>
+                <li>
+                    <strong>Custom N-ary Tree</strong>
+                    <span>Hierarchical community taxonomy with O(1) node index, DFS/BFS, cycle checks.</span>
+                </li>
+                <li>
+                    <strong>Simulated Distributed HashMap</strong>
+                    <span>4 logical shards partitioning user karma & post scores by hash routing.</span>
+                </li>
+                <li>
+                    <strong>Custom Min-Heap Top-K</strong>
+                    <span>O(N log K) priority queue algorithm driving live trending ranks without heapq.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Trending Posts Sidebar Preview -->
+        <div class="card sidebar-card">
+            <div class="sidebar-header">
+                <h4> Top Trending</h4>
+                <a href="{{ url_for('trending') }}" class="view-all-link">View All</a>
+            </div>
+            <div class="trending-mini-list">
+                {% for tp in trending_posts %}
+                    <a href="{{ url_for('view_post', post_id=tp.id) }}" class="trending-mini-item">
+                        <span class="trending-rank">#{{ tp.rank }}</span>
+                        <div class="trending-mini-info">
+                            <span class="trending-mini-title">{{ tp.title }}</span>
+                            <span class="trending-mini-score">Score: {{ tp.score }} | Trend: {{ tp.trending_score }}</span>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Arcane Exhibition Quick Login -->
+        <div class="card sidebar-card">
+            <h4> Arcane Demo Accounts</h4>
+            <p class="card-subtitle">One-click account switching for exhibition</p>
+            <div class="demo-accounts-grid">
+                {% for acc in demo_accounts %}
+                    <a href="{{ url_for('switch_account', username=acc.username) }}"
+                       class="demo-chip {% if current_user and current_user.username == acc.username %}active{% endif %}"
+                       title="Switch to {{ acc.display_name }}">
+                        {{ acc.display_name.split()[0] }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Explore Communities Widget -->
+        <div class="card sidebar-card">
+            <div class="sidebar-header">
+                <h4> Communities Tree</h4>
+                <a href="{{ url_for('explore_communities') }}" class="view-all-link">Interactive Map</a>
+            </div>
+            <div class="community-tags">
+                {% for c in global_communities %}
+                    <a href="{{ url_for('view_community', slug=c.slug) }}" class="community-tag">
+                        c/{{ c.name }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+{% endblock %}

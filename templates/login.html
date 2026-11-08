@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_register %}Sign Up{% else %}Log In{% endif %} — Threadit{% endblock %}
+
+{% block content %}
+<div class="auth-page-container">
+
+    <div class="card auth-card">
+        <div class="auth-header">
+            <span class="logo-icon large">▲</span>
+            <h2>{% if is_register %}Join Threadit{% else %}Welcome to Threadit{% endif %}</h2>
+            <p class="card-subtitle">Where conversations connect through Data Structures.</p>
+        </div>
+
+        <div class="auth-tabs">
+            <a href="{{ url_for('login') }}" class="auth-tab {% if not is_register %}active{% endif %}">Log In</a>
+            <a href="{{ url_for('register') }}" class="auth-tab {% if is_register %}active{% endif %}">Sign Up</a>
+        </div>
+
+        {% if is_register %}
+            <!-- Registration Form -->
+            <form action="{{ url_for('register') }}" method="POST" class="auth-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" placeholder="e.g. Sarz" required class="text-input" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Display Name</label>
+                    <input type="text" name="display_name" placeholder="e.g. rey sarz" required class="text-input">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" placeholder="Choose a secure password" required class="text-input">
+                </div>
+                <div class="form-group">
+                    <label>Bio (Optional)</label>
+                    <textarea name="bio" placeholder="Tell us about yourself and your tech interests..." rows="2" class="textarea-input"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+            </form>
+        {% else %}
+            <!-- Login Form -->
+            <form action="{{ url_for('login') }}" method="POST" class="auth-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" placeholder="Enter username" required class="text-input" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" placeholder="Enter password" required class="text-input" autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Log In</button>
+            </form>
+        {% endif %}
+
+        <!-- Arcane Exhibition Demo Accounts Quick Login Panel -->
+        <div class="demo-login-section">
+            <div class="divider">
+                <span>OR SIGN IN WITH READY-MADE ARCANE ACCOUNT</span>
+            </div>
+            <p class="demo-note">Pre-seeded with demo password: <code>Threadit@123</code></p>
+
+            <div class="demo-accounts-list">
+                {% for acc in demo_accounts %}
+                    <form action="{{ url_for('login') }}" method="POST" class="demo-account-form">
+                        <input type="hidden" name="username" value="{{ acc.username }}">
+                        <input type="hidden" name="password" value="Threadit@123">
+                        <button type="submit" class="demo-login-btn" title="Click to log in as {{ acc.display_name }}">
+                            <span class="avatar-sm">{{ acc.display_name[0] }}</span>
+                            <div class="demo-btn-text">
+                                <span class="demo-name">{{ acc.display_name }}</span>
+                                <span class="demo-role">u/{{ acc.username }}</span>
+                            </div>
+                            <span class="arrow-right">→</span>
+                        </button>
+                    </form>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

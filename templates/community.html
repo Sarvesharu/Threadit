@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if is_explorer %}
+        Community Hierarchy Tree — Threadit
+    {% else %}
+        c/{{ community.name }} — Threadit
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    {% if is_explorer %}
+        <!-- Full Visual Hierarchy Explorer Mode -->
+        <div class="hierarchy-explorer-page">
+            <div class="card page-header-card">
+                <div class="header-left">
+                    <h2> N-ary Community Hierarchy Explorer</h2>
+                    <p class="subtitle">Visualizing parent-child taxonomy powered by custom N-ary Tree and custom HashMap.</p>
+                </div>
+                <div class="header-right">
+                    <span class="dsa-badge">N-ary Tree + HashMap</span>
+                    <span class="dsa-badge">Traversal: O(V + E)</span>
+                    <span class="dsa-badge">Node Lookup: O(1)</span>
+                </div>
+            </div>
+
+            <div class="layout-two-col">
+                <!-- Visual Hierarchy Tree View -->
+                <div class="card tree-card">
+                    <h3>Hierarchical Taxonomy Structure</h3>
+                    <p class="section-desc">Tree nodes represent communities. Click any community to explore its posts.</p>
+
+                    <div class="tree-container">
+                        {% macro render_tree(nodes) %}
+                            <ul class="tree-branch">
+                                {% for node in nodes %}
+                                    <li class="tree-node">
+                                        <div class="node-content">
+                                            <span class="node-bullet"></span>
+                                            <a href="{{ url_for('view_community', slug=node.metadata.slug) }}" class="node-link">
+                                                <strong>c/{{ node.name }}</strong>
+                                            </a>
+                                            {% if node.metadata.description %}
+                                                <span class="node-desc">{{ node.metadata.description }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if node.children %}
+                                            {{ render_tree(node.children) }}
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endmacro %}
+
+                        {{ render_tree(hierarchy) }}
+                    </div>
+                </div>
+
+                <!-- Traversals Showcase Column -->
+                <div class="traversals-column">
+                    <!-- DFS Panel -->
+                    <div class="card traversal-card">
+                        <div class="traversal-header">
+                            <h4> Depth-First Search (DFS)</h4>
+                            <span class="tag">Pre-order Traversal</span>
+                        </div>
+                        <p class="algo-explanation">
+                            Visits root, dives down each branch deeply before backtracking. Complexity: <code>O(V + E)</code>.
+                        </p>
+                        <div class="traversal-pills">
+                            {% for item in dfs_nodes %}
+                                <div class="traversal-pill depth-{{ item.depth }}">
+                                    <span class="step-num">{{ loop.index }}</span>
+                                    <span class="pill-name">c/{{ item.name }}</span>
+                                    <span class="pill-depth">lvl {{ item.depth }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- BFS Panel -->
+                    <div class="card traversal-card">
+                        <div class="traversal-header">
+                            <h4> Breadth-First Search (BFS)</h4>
+                            <span class="tag">Level-order Traversal</span>
+                        </div>
+                        <p class="algo-explanation">
+                            Visits every community level-by-level using a FIFO queue. Complexity: <code>O(V + E)</code>.
+                        </p>
+                        <div class="traversal-pills">
+                            {% for item in bfs_nodes %}
+                                <div class="traversal-pill depth-{{ item.depth }}">
+                                    <span class="step-num">{{ loop.index }}</span>
+                                    <span class="pill-name">c/{{ item.name }}</span>
+                                    <span class="pill-depth">lvl {{ item.depth }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Specific Community View Mode -->
+        <div class="community-view-page">
+
+            <!-- Breadcrumbs Header -->
+            <nav class="breadcrumbs-nav">
+                <a href="{{ url_for('index') }}" class="crumb-link">Home</a>
+                <span class="crumb-separator">/</span>
+                <a href="{{ url_for('explore_communities') }}" class="crumb-link">Communities</a>
+                {% for crumb in breadcrumbs %}
+                    <span class="crumb-separator">/</span>
+                    {% if loop.last %}
+                        <span class="crumb-current">c/{{ crumb.name }}</span>
+                    {% else %}
+                        <a href="{{ url_for('view_community', slug=crumb.name.lower()) }}" class="crumb-link">c/{{ crumb.name }}</a>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+
+            <!-- Community Banner Card -->
+            <div class="card community-banner-card">
+                <div class="community-banner-main">
+                    <span class="community-icon"></span>
+                    <div class="community-details">
+                        <h1>c/{{ community.name }}</h1>
+                        <p class="community-desc">{{ community.description }}</p>
+                    </div>
+                </div>
+
+                <div class="community-relations">
+                    {% if parent %}
+                        <div class="relation-item">
+                            <span class="rel-label">Parent Community:</span>
+                            <a href="{{ url_for('view_community', slug=parent.metadata.slug) }}" class="btn btn-outline btn-sm">
+                                ⬆ c/{{ parent.name }}
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if children %}
+                        <div class="relation-item">
+                            <span class="rel-label">Sub-Communities:</span>
+                            <div class="sub-comm-chips">
+                                {% for child in children %}
+                                    <a href="{{ url_for('view_community', slug=child.metadata.slug) }}" class="community-chip">
+                                        ↳ c/{{ child.name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Posts in this Community -->
+            <div class="community-posts-section">
+                <div class="section-title-row">
+                    <h3>Posts in c/{{ community.name }}</h3>
+                    <span class="post-count">{{ posts|length }} posts</span>
+                </div>
+
+                {% if posts %}
+                    <div class="posts-list">
+                        {% for post in posts %}
+                            <article class="post-card" id="post-{{ post.id }}">
+                                <div class="vote-column">
+                                    <button class="vote-btn upvote {% if post.user_vote == 1 %}active{% endif %}"
+                                            onclick="handleVote({{ post.id }}, 1)"
+                                            {% if not current_user %}disabled{% endif %}>
+                                        ▲
+                                    </button>
+                                    <span class="post-score" id="score-{{ post.id }}">{{ post.score }}</span>
+                                    <button class="vote-btn downvote {% if post.user_vote == -1 %}active{% endif %}"
+                                            onclick="handleVote({{ post.id }}, -1)"
+                                            {% if not current_user %}disabled{% endif %}>
+                                        ▼
+                                    </button>
+                                </div>
+                                <div class="post-body">
+                                    <div class="post-meta">
+                                        <span class="post-author">Posted by <a href="{{ url_for('view_profile', username=post.author_username) }}">u/{{ post.author_username }}</a></span>
+                                        <span class="meta-dot">•</span>
+                                        <span class="post-time">{{ post.created_at }}</span>
+                                    </div>
+                                    <h2 class="post-title">
+                                        <a href="{{ url_for('view_post', post_id=post.id) }}">{{ post.title }}</a>
+                                    </h2>
+                                    <p class="post-snippet">{{ post.content }}</p>
+                                    <div class="post-footer">
+                                        <a href="{{ url_for('view_post', post_id=post.id) }}" class="footer-action">
+                                             Comments & Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="card empty-state">
+                        <p>No posts in this community yet.</p>
+                        <a href="{{ url_for('index') }}" class="btn btn-primary btn-sm">Be the first to post</a>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

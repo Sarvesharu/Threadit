@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Search "{{ query }}" — Threadit{% endblock %}
+
+{% block content %}
+<div class="container search-page-container">
+
+    <!-- Search Header & Controls -->
+    <div class="card search-control-card">
+        <h2> Full-Text Inverted Index Search</h2>
+        <p class="subtitle">Powered by custom HashMap and Inverted Index. No SQLite LIKE queries.</p>
+
+        <form action="{{ url_for('search') }}" method="GET" class="search-page-form">
+            <div class="search-input-group">
+                <input type="text" name="q" value="{{ query }}" placeholder="Search posts, topics, users, communities..." required class="text-input search-large-input">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="filter-tabs">
+                <a href="{{ url_for('search', q=query, type='all') }}" class="filter-tab {% if filter_type == 'all' or not filter_type %}active{% endif %}">All Results</a>
+                <a href="{{ url_for('search', q=query, type='post') }}" class="filter-tab {% if filter_type == 'post' %}active{% endif %}">Posts</a>
+                <a href="{{ url_for('search', q=query, type='community') }}" class="filter-tab {% if filter_type == 'community' %}active{% endif %}">Communities</a>
+                <a href="{{ url_for('search', q=query, type='user') }}" class="filter-tab {% if filter_type == 'user' %}active{% endif %}">Users</a>
+            </div>
+        </form>
+    </div>
+
+    {% if query %}
+        <!-- Search Performance & DSA Metrics Panel -->
+        <div class="card dsa-metrics-card">
+            <div class="metric-header">
+                <span class="metric-title"> Inverted Index Performance Diagnostics</span>
+                <span class="dsa-tag">HashMap Separate Chaining</span>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-label">Execution Time</span>
+                    <span class="metric-val highlight">{{ execution_time_ms }} ms</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Total Matches</span>
+                    <span class="metric-val">{{ total_matches }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Tokenized Terms</span>
+                    <span class="metric-val"><code>{{ tokens }}</code></span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Theoretical Complexity</span>
+                    <span class="metric-val">Avg O(1) lookup / Worst O(n)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Results List -->
+        <div class="search-results-section">
+            {% if results %}
+                <div class="results-list">
+                    {% for item in results %}
+                        {% if item.type == 'post' %}
+                            <article class="card result-card result-post">
+                                <div class="result-badge-row">
+                                    <span class="result-type-tag post-tag">POST</span>
+                                    <span class="result-hits-tag">Matched {{ item.hits }} token(s)</span>
+                                </div>
+                                <h3><a href="{{ url_for('view_post', post_id=item.data.id) }}">{{ item.data.title }}</a></h3>
+                                <p class="result-snippet">{{ item.data.content[:200] }}...</p>
+                                <div class="result-meta">
+                                    <span>c/{{ item.data.community_name }}</span>
+                                    <span>•</span>
+                                    <span>By u/{{ item.data.author_username }}</span>
+                                    <span>•</span>
+                                    <span>Score: {{ item.data.score }}</span>
+                                </div>
+                            </article>
+                        {% elif item.type == 'community' %}
+                            <article class="card result-card result-community">
+                                <div class="result-badge-row">
+                                    <span class="result-type-tag comm-tag">COMMUNITY</span>
+                                    <span class="result-hits-tag">Matched {{ item.hits }} token(s)</span>
+                                </div>
+                                <h3><a href="{{ url_for('view_community', slug=item.data.slug) }}">c/{{ item.data.name }}</a></h3>
+                                <p class="result-snippet">{{ item.data.description }}</p>
+                            </article>
+                        {% elif item.type == 'user' %}
+                            <article class="card result-card result-user">
+                                <div class="result-badge-row">
+                                    <span class="result-type-tag user-tag">USER</span>
+                                    <span class="result-hits-tag">Matched {{ item.hits }} token(s)</span>
+                                </div>
+                                <div class="user-result-row">
+                                    <span class="avatar-sm">{{ item.data.display_name[0] }}</span>
+                                    <div>
+                                        <h3><a href="{{ url_for('view_profile', username=item.data.username) }}">{{ item.data.display_name }} (@{{ item.data.username }})</a></h3>
+                                        <p class="result-snippet">{{ item.data.bio }}</p>
+                                    </div>
+                                </div>
+                            </article>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card empty-state">
+                    <p>No results found matching "{{ query }}".</p>
+                    <span class="hint">Try searching for keywords like "python", "cybersecurity", "forensics", or "sarvesh".</span>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

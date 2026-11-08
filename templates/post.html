@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} — Threadit{% endblock %}
+
+{% block content %}
+<div class="container post-detail-container">
+
+    <!-- Community Breadcrumbs -->
+    <nav class="breadcrumbs-nav">
+        <a href="{{ url_for('index') }}" class="crumb-link">Home</a>
+        <span class="crumb-separator">/</span>
+        <a href="{{ url_for('explore_communities') }}" class="crumb-link">Communities</a>
+        {% for crumb in breadcrumbs %}
+            <span class="crumb-separator">/</span>
+            {% if loop.last %}
+                <a href="{{ url_for('view_community', slug=crumb.name.lower()) }}" class="crumb-link">c/{{ crumb.name }}</a>
+            {% else %}
+                <a href="{{ url_for('view_community', slug=crumb.name.lower()) }}" class="crumb-link">c/{{ crumb.name }}</a>
+            {% endif %}
+        {% endfor %}
+    </nav>
+
+    {% if is_editing %}
+        <!-- Edit Post Form -->
+        <div class="card edit-post-card">
+            <h2>Edit Post</h2>
+            <form action="{{ url_for('edit_post', post_id=post.id) }}" method="POST">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" name="title" value="{{ post.title }}" required class="text-input">
+                </div>
+                <div class="form-group">
+                    <label>Content</label>
+                    <textarea name="content" rows="8" required class="textarea-input">{{ post.content }}</textarea>
+                </div>
+                <div class="form-actions">
+                    <a href="{{ url_for('view_post', post_id=post.id) }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    {% else %}
+        <!-- Post Display Card -->
+        <article class="card post-detail-card" id="post-{{ post.id }}">
+            <div class="post-detail-layout">
+                <!-- Vote Column -->
+                <div class="vote-column">
+                    <button class="vote-btn upvote {% if post.user_vote == 1 %}active{% endif %}"
+                            onclick="handleVote({{ post.id }}, 1)"
+                            {% if not current_user %}disabled{% endif %}>
+                        ▲
+                    </button>
+                    <span class="post-score" id="score-{{ post.id }}">{{ post.score }}</span>
+                    <button class="vote-btn downvote {% if post.user_vote == -1 %}active{% endif %}"
+                            onclick="handleVote({{ post.id }}, -1)"
+                            {% if not current_user %}disabled{% endif %}>
+                        ▼
+                    </button>
+                </div>
+
+                <!-- Main Content -->
+                <div class="post-detail-body">
+                    <div class="post-meta">
+                        <a href="{{ url_for('view_community', slug=post.community_slug) }}" class="community-badge">
+                            c/{{ post.community_name }}
+                        </a>
+                        <span class="meta-dot">•</span>
+                        <span class="post-author">Posted by <a href="{{ url_for('view_profile', username=post.author_username) }}">u/{{ post.author_username }}</a></span>
+                        <span class="meta-dot">•</span>
+                        <span class="post-time">{{ post.created_at }}</span>
+                        {% if post.updated_at != post.created_at %}
+                            <span class="edited-tag">(edited)</span>
+                        {% endif %}
+                    </div>
+
+                    <h1 class="post-detail-title">{{ post.title }}</h1>
+
+                    <div class="post-content-full">
+                        {{ post.content }}
+                    </div>
+
+                    <!-- Post Footer & Actions -->
+                    <div class="post-detail-footer">
+                        <div class="vote-summary">
+                            <span class="stat-item">👍 {{ post.upvotes }} Upvotes</span>
+                            <span class="stat-item">👎 {{ post.downvotes }} Downvotes</span>
+                            <span class="stat-item highlight">🏆 Net Score: {{ post.score }}</span>
+                        </div>
+
+                        {% if current_user and current_user.id == post.author_id %}
+                            <div class="author-actions">
+                                <a href="{{ url_for('edit_post', post_id=post.id) }}" class="btn btn-outline btn-sm">Edit Post</a>
+                                <form action="{{ url_for('delete_post', post_id=post.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this post?');" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete Post</button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- DSA In-Memory & Sharding Diagnostic Box -->
+                    <div class="dsa-diagnostic-panel">
+                        <span class="diagnostic-title">⚙️ DSA State & Partitioning Metadata</span>
+                        <div class="diagnostic-grid">
+                            <div class="diag-item">
+                                <span class="diag-label">Inverted Index Status:</span>
+                                <span class="diag-val">Indexed in Custom HashMap</span>
+                            </div>
+                            <div class="diag-item">
+                                <span class="diag-label">Score Storage:</span>
+                                <span class="diag-val">In-Memory HashMap O(1)</span>
+                            </div>
+                            <div class="diag-item">
+                                <span class="diag-label">Simulated Shard Routing:</span>
+                                <span class="diag-val">Routed to Logical Shard #{{ (post.id * 3) % 4 }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </article>
+    {% endif %}
+
+</div>
+{% endblock %}
